@@ -7,19 +7,62 @@ output:
 
 
 ## Loading and preprocessing the data
-
-
+```{r}
+activity<-read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
-
+```{r}
+stepsPerDay<-aggregate(steps ~ date, activity, sum)
+hist(stepsPerDay$steps,xlab = "Total Steps", main = "Histogram of Total Steps per Day")
+mean(stepsPerDay$steps)
+median(stepsPerDay$steps)
+```
 
 
 ## What is the average daily activity pattern?
-
+```{r}
+meanPerInterval<-aggregate(steps ~ interval, data=activity, FUN=mean)
+plot(meanPerInterval,main="Average Steps Per Time Interval", xlab="Intervall",ylab="Steps", type="l")
+#lines(meanPerInterval)
+subset(meanPerInterval, steps==max(meanPerInterval$steps))
+```
 
 
 ## Imputing missing values
+```{r}
+length(activity$steps[is.na(activity$steps)])
 
+activityPlusMean<-merge(activity,meanPerInterval,by="interval")
+activityPlusMean[is.na(activityPlusMean$steps.x),"steps.x"]<-activityPlusMean[is.na(activityPlusMean$steps.x),"steps.y"]
 
+activityCompleteCases<-activityPlusMean[,c("interval","steps.x","date")]
+names(activityCompleteCases)<-c("interval","steps","date")
+stepsPerDayCC<-aggregate(steps ~ date, activityCompleteCases, sum)
+
+hist(stepsPerDayCC$steps,xlab = "Total Steps", main = "Histogram of Total Steps per Day")
+mean(stepsPerDayCC$steps)
+median(stepsPerDayCC$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+library(lubridate)
+activityCompleteCases<-cbind(activityCompleteCases, weekdays(ymd(activityCompleteCases$date)))
+names(activityCompleteCases)[4]<-"weekday"
+activityWeekEnd<-activityCompleteCases[activityCompleteCases$weekday %in% c("Saturday","Sunday"),]
+activityWeekDay<-activityCompleteCases[activityCompleteCases$weekday %in% c("Monday","Tuesday","Wednesday","Thursday","Friday"),]
+meanWeekDay<-aggregate(steps~interval,  activityWeekDay, mean)
+meanWeekEnd<-aggregate(steps~interval, activityWeekEnd, mean)
+
+par(mfrow=c(2,1),mar=c(4,4,2,1))
+plot(meanWeekEnd,type="l",main="Weekend", xlab="Interval", ylab="Number of steps", col="blue")
+plot(meanWeekDay,type="l",main="Weekday", xlab="Interval",ylab="Number of steps", col="green")
+```
+
+```{r}
+par(mfrow=c(1,1),mar=c(4,4,2,1))
+plot(meanWeekDay,type="l",main="Weekday vs. Weekend", xlab="Interval",ylab="Number of steps", col="green")
+lines(meanWeekEnd,col="blue")
+legend("topright",c("Weekday","Weekend"),col=c("green","blue"),lty=c(1,1))
+```
